@@ -1,0 +1,39 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+/tmp
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Build tools and caches
+.npm
+.next
+/dist
+/build
+.cache
+
+# Coverage directory used by tools such as istanbul
+coverage
+
+# Local development environment variables
+.env.local
+.env.development.local
+
+# Editor and IDE configurations
+.idea/
+.vscode/
+*.iml
+
+# System files
+.DS_Store
+Thumbs.db

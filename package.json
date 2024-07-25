@@ -1,0 +1,27 @@
+{
+  "name": "voxelamming-node",
+  "version": "1.0.0",
+  "description": "This JavaScript package converts JavaScript code into JSON format and sends it to the Voxelamming app using WebSockets, allowing users to create 3D voxel models by writing JavaScript scripts.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/creativival/voxelamming-node.git"
+  },
+  "keywords": [
+    "voxelamming",
+    "websocket",
+    "utility"
+  ],
+  "author": "creativival",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/creativival/voxelamming-node/issues"
+  },
+  "homepage": "https://creativival.github.io/voxelamming-node",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
