@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>VoxelammingGem</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            line-height: 1.6;
+            margin: 2rem auto;
+            max-width: 800px;
+            padding: 0 1rem;
+        }
+
+        h1, h2, h3 {
+            margin-top: 1.5rem;
+        }
+
+        a {
+            color: #0645ad;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        pre {
+            background-color: #f5f5f5;
+            border: 1px solid #ccc;
+            overflow-x: auto;
+            padding: 1rem;
+        }
+
+        code {
+            font-family: monospace;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 0.5rem;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+
+<h2><a href="#voxelamming-node" id="voxelamming-node"></a>voxelamming-node</h2>
+<p>This JavaScript package converts JavaScript code into JSON format and sends it to the Voxelamming app using WebSockets, allowing users to create 3D voxel models by writing JavaScript scripts.</p>
+<h2><a href="#whats-voxelamming" id="whats-voxelamming"></a>What's Voxelamming?</h2>
+<p align="center"><img src="https://creativival.github.io/voxelamming/image/voxelamming_icon.png" alt="Voxelamming Logo" width="200"/></p>
+<p>Voxelamming is an AR programming learning app. Even programming beginners can learn programming visually and enjoyably. Voxelamming supports iPhones and iPads with iOS 16 or later, and Apple Vision Pro.</p>
+<h2><a href="#resources" id="resources"></a>Resources</h2>
+<ul>
+    <li><strong>Homepage:</strong> https://creativival.github.io/voxelamming/index.en</li>
+    <li><strong>Samples:</strong> https://github.com/creativival/voxelamming/tree/main/sample/python</li>
+</ul>
+<h2><a href="#installation" id="installation"></a>Installation</h2>
+<pre><code class="bash">npm install voxelamming-node
+</code></pre>
+<h2><a href="#usage" id="usage"></a>Usage</h2>
+<pre><code class="javascript">// const { BuildBox } = require('voxelamming-node');
+
+(async () =&gt; {
+  const roomName = '1000';
+  const buildBox = new BuildBox(roomName);
+
+  buildBox.setBoxSize(0.5);
+  buildBox.setBuildInterval(0.01);
+
+  for (let i = 0; i &lt; 100; i++) {
+    buildBox.createBox(-1, i, 0, 0, 1, 1);
+    buildBox.createBox(0, i, 0, 1, 0, 0);
+    buildBox.createBox(1, i, 0, 1, 1, 0);
+    buildBox.createBox(2, i, 0, 0, 1, 1);
+  }
+
+  for (let i = 0; i &lt; 50; i++) {
+    buildBox.removeBox(0, i * 2, 0);
+    buildBox.removeBox(1, i * 2 + 1, 0);
+  }
+
+  await buildBox.sendData(&quot;main&quot;);
+  console.log('send data done')
+})().catch(error =&gt; {
+  console.error(error);
+});
+
+</code></pre>
+<p>This code snippet demonstrates a simple example where a red voxel is created at a specific location. You can use various functions provided by the <code>BuildBox</code> class to build more complex models.</p>
+<h4><a href="#method-description" id="method-description"></a>Method description</h4>
+<table>
+    <thead>
+    <tr><th> Method name </th><th> Description </th><th> Arguments </th></tr>
+    </thead>
+    <tbody>
+    <tr><td> <code>setRoomName(roomName)</code> </td><td> Sets the room name for communicating with the device. </td><td> <code>roomName</code>: Room name (string) </td></tr>
+    <tr><td> <code>setBoxSize(size)</code> </td><td> Sets the size of the voxel (default: 1.0). </td><td> <code>size</code>: Size (float) </td></tr>
+    <tr><td> <code>setBuildInterval(interval)</code> </td><td> Sets the placement interval of the voxels (default: 0.01 seconds). </td><td> <code>interval</code>: Interval (float) </td></tr>
+    <tr><td> <code>changeShape(shape)</code> </td><td> Changes the shape of the voxel. </td><td> <code>shape</code>: Shape (&quot;box&quot;, &quot;square&quot;, &quot;plane&quot;) </td></tr>
+    <tr><td> <code>changeMaterial(isMetallic, roughness)</code> </td><td> Changes the material of the voxel. </td><td> <code>isMetallic</code>: Whether to make it metallic (boolean), <code>roughness</code>: Roughness (float) </td></tr>
+    <tr><td> <code>createBox(x, y, z, r, g, b, alpha)</code> </td><td> Places a voxel. </td><td> <code>x</code>, <code>y</code>, <code>z</code>: Position (float), <code>r</code>, <code>g</code>, <code>b</code>, <code>alpha</code>: Color (float, 0-1) </td></tr>
+    <tr><td> <code>createBox(x, y, z, texture)</code> </td><td> Places a voxel with texture. </td><td> <code>x</code>, <code>y</code>, <code>z</code>: Position (float), <code>texture</code>: Texture name (string) </td></tr>
+    <tr><td> <code>removeBox(x, y, z)</code> </td><td> Removes a voxel. </td><td> <code>x</code>, <code>y</code>, <code>z</code>: Position (float) </td></tr>
+    <tr><td> <code>writeSentence(sentence, x, y, z, r, g, b, alpha)</code> </td><td> Draws a string with voxels. </td><td> <code>sentence</code>: String (string), <code>x</code>, <code>y</code>, <code>z</code>: Position (float), <code>r</code>, <code>g</code>, <code>b</code>, <code>alpha</code>: Color (float, 0-1) </td></tr>
+    <tr><td> <code>setLight(x, y, z, r, g, b, alpha, intensity, interval, lightType)</code> </td><td> Places a light. </td><td> <code>x</code>, <code>y</code>, <code>z</code>: Position (float), <code>r</code>, <code>g</code>, <code>b</code>, <code>alpha</code>: Color (float, 0-1), <code>intensity</code>: Intensity (float), <code>interval</code>: Blinking interval (float), <code>lightType</code>: Type of light (&quot;point&quot;, &quot;spot&quot;, &quot;directional&quot;) </td></tr>
+    <tr><td> <code>setCommand(command)</code> </td><td> Executes a command. </td><td> <code>command</code>: Command (&quot;axis&quot;, &quot;japaneseCastle&quot;, &quot;float&quot;, &quot;liteRender&quot;) </td></tr>
+    <tr><td> <code>drawLine(x1, y1, z1, x2, y2, z2, r, g, b, alpha)</code> </td><td> Draws a line between two points. </td><td> <code>x1</code>, <code>y1</code>, <code>z1</code>: Starting point (float), <code>x2</code>, <code>y2</code>, <code>z2</code>: Ending point (float), <code>r</code>, <code>g</code>, <code>b</code>, <code>alpha</code>: Color (float, 0-1) </td></tr>
+    <tr><td> <code>sendData(name)</code> </td><td> Sends voxel data to the device; if the name argument is set, the voxel data can be stored and reproduced as history. </td><td> </td></tr>
+    <tr><td> <code>clearData()</code> </td><td> Initializes voxel data. </td><td> </td></tr>
+    <tr><td> <code>translate(x, y, z, pitch, yaw, roll)</code> </td><td> Moves and rotates the coordinate system of the voxel. </td><td> <code>x</code>, <code>y</code>, <code>z</code>: Translation amount (float), <code>pitch</code>, <code>yaw</code>, <code>roll</code>: Rotation amount (float) </td></tr>
+    <tr><td> <code>animate(x, y, z, pitch, yaw, roll, scale, interval)</code> </td><td> Animates a voxel. </td><td> <code>x</code>, <code>y</code>, <code>z</code>: Translation amount (float), <code>pitch</code>, <code>yaw</code>, <code>roll</code>: Rotation amount (float), <code>scale</code>: Scale (float), <code>interval</code>: Interval (float) </td></tr>
+    <tr><td> <code>animateGlobal(x, y, z, pitch, yaw, roll, scale, interval)</code> </td><td> Animates all voxels. </td><td> <code>x</code>, <code>y</code>, <code>z</code>: Translation amount (float), <code>pitch</code>, <code>yaw</code>, <code>roll</code>: Rotation amount (float), <code>scale</code>: Scale (float), <code>interval</code>: Interval (float) </td></tr>
+    <tr><td> <code>pushMatrix()</code> </td><td> Saves the current coordinate system to the stack. </td><td> </td></tr>
+    <tr><td> <code>popMatrix()</code> </td><td> Restores the coordinate system from the stack. </td><td> </td></tr>
+    <tr><td> <code>frameIn()</code> </td><td> Starts recording a frame. </td><td> </td></tr>
+    <tr><td> <code>frameOut()</code> </td><td> Ends recording a frame. </td><td> </td></tr>
+    <tr><td> <code>setFrameFps(fps)</code> </td><td> Sets the frame rate (default: 2). </td><td> <code>fps</code>: Frame rate (int) </td></tr>
+    <tr><td> <code>setFrameRepeats(repeats)</code> </td><td> Sets the number of frame repetitions (default: 10). </td><td> <code>repeats</code>: Number of repetitions (int) </td></tr>
+    </tbody>
+</table>
+<h2><a href="#notes" id="notes"></a>Notes</h2>
+<ul>
+    <li>Ensure that the Voxelamming app is running and connected to the same room name specified in your JavaScript script.</li>
+</ul>
+<p>This library is under active development. More features and improvements are planned for future releases.</p>
+<h2><a href="#license" id="license"></a>License</h2>
+<p><a href="https://github.com/creativival/voxelamming/blob/master/LICENSE">MIT License</a></p>
+<h2><a href="#author" id="author"></a>Author</h2>
+<p>creativival</p>
+
+
+
+
+</body>
+</html>
