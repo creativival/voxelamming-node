@@ -60,50 +60,46 @@
 <body>
 
 
-<h2><a href="#voxelamming-node" id="voxelamming-node"></a>voxelamming-node</h2>
+<h2>voxelamming-node</h2>
 <p>This JavaScript package converts JavaScript code into JSON format and sends it to the Voxelamming app using WebSockets, allowing users to create 3D voxel models by writing JavaScript scripts.</p>
-<h2><a href="#whats-voxelamming" id="whats-voxelamming"></a>What's Voxelamming?</h2>
+<h2>What's Voxelamming?</h2>
 <p align="center"><img src="https://creativival.github.io/voxelamming/image/voxelamming_icon.png" alt="Voxelamming Logo" width="200"/></p>
 <p>Voxelamming is an AR programming learning app. Even programming beginners can learn programming visually and enjoyably. Voxelamming supports iPhones and iPads with iOS 16 or later, and Apple Vision Pro.</p>
-<h2><a href="#resources" id="resources"></a>Resources</h2>
+<h2>Resources</h2>
 <ul>
     <li><strong>Homepage:</strong> https://creativival.github.io/voxelamming/index.en</li>
     <li><strong>Samples:</strong> https://github.com/creativival/voxelamming/tree/main/sample/python</li>
 </ul>
-<h2><a href="#installation" id="installation"></a>Installation</h2>
-<pre><code class="bash">npm install voxelamming-node
+<h2>Installation</h2>
+<pre><code class="bash">npm install voxelamming
 </code></pre>
-<h2><a href="#usage" id="usage"></a>Usage</h2>
-<pre><code class="javascript">// const { BuildBox } = require('voxelamming-node');
+<h2>Usage</h2>
+<pre><code class="javascript">// main.mjs
+import { Voxelamming } from 'voxelamming';
 
-(async () =&gt; {
-  const roomName = '1000';
-  const buildBox = new BuildBox(roomName);
+const roomName = '1000';
+const vox = new Voxelamming(roomName);
 
-  buildBox.setBoxSize(0.5);
-  buildBox.setBuildInterval(0.01);
+vox.setBoxSize(0.5);
+vox.setBuildInterval(0.01);
 
-  for (let i = 0; i &lt; 100; i++) {
-    buildBox.createBox(-1, i, 0, 0, 1, 1);
-    buildBox.createBox(0, i, 0, 1, 0, 0);
-    buildBox.createBox(1, i, 0, 1, 1, 0);
-    buildBox.createBox(2, i, 0, 0, 1, 1);
-  }
+for (let i = 0; i &lt; 100; i++) {
+  vox.createBox(-1, i, 0, 0, 1, 1);
+  vox.createBox(0, i, 0, 1, 0, 0);
+  vox.createBox(1, i, 0, 1, 1, 0);
+  vox.createBox(2, i, 0, 0, 1, 1);
+}
 
-  for (let i = 0; i &lt; 50; i++) {
-    buildBox.removeBox(0, i * 2, 0);
-    buildBox.removeBox(1, i * 2 + 1, 0);
-  }
+for (let i = 0; i &lt; 50; i++) {
+  vox.removeBox(0, i * 2, 0);
+  vox.removeBox(1, i * 2 + 1, 0);
+}
 
-  await buildBox.sendData(&quot;main&quot;);
-  console.log('send data done')
-})().catch(error =&gt; {
-  console.error(error);
-});
-
+await vox.sendData(&quot;main&quot;);
+console.log('send data done')
 </code></pre>
-<p>This code snippet demonstrates a simple example where a red voxel is created at a specific location. You can use various functions provided by the <code>BuildBox</code> class to build more complex models.</p>
-<h4><a href="#method-description" id="method-description"></a>Method description</h4>
+<p>This code snippet demonstrates a simple example where a red voxel is created at a specific location. You can use various functions provided by the <code>Voxelamming</code> class to build more complex models.</p>
+<h4>Method description</h4>
 <table>
     <thead>
     <tr><th> Method name </th><th> Description </th><th> Arguments </th></tr>
@@ -132,16 +128,22 @@
     <tr><td> <code>frameOut()</code> </td><td> Ends recording a frame. </td><td> </td></tr>
     <tr><td> <code>setFrameFps(fps)</code> </td><td> Sets the frame rate (default: 2). </td><td> <code>fps</code>: Frame rate (int) </td></tr>
     <tr><td> <code>setFrameRepeats(repeats)</code> </td><td> Sets the number of frame repetitions (default: 10). </td><td> <code>repeats</code>: Number of repetitions (int) </td></tr>
+    <tr><td> Game Method Name                                                                              </td><td> Description </td><td> Arguments                                                                                                                                                            </td></tr>
+    <tr><td> <code>setGameScreen(width, height, angle=90, r=1, g=1, b=0, alpha=0.5)</code>                </td><td> Sets the game screen size. </td><td> <code>width</code>, <code>height</code>: screen size (float), <code>angle</code>: angle (float), <code>r</code>, <code>g</code>, <code>b</code>, <code>alpha</code>: color (float, 0-1)                                                            </td></tr>
+    <tr><td> <code>setGameScore(score)</code>                                                                  </td><td> Sets the game score. </td><td> <code>score</code>: game score (int)                                                                                                                                            </td></tr>
+    <tr><td> <code>sendGameOver()</code>                                                                       </td><td> Triggers game over. </td><td>                                                                                                                                                                     </td></tr>
+    <tr><td> <code>createSprite(sprite_name, color_list, x, y, direction=90, scale=1, visible=True)</code>      </td><td> Creates a sprite. </td><td> <code>sprite_name</code>: sprite name (string), <code>color_list</code>: dot color data (string), <code>x</code>, <code>y</code>: position (float), <code>direction</code>: angle (float), <code>scale</code>: scale (float), <code>visible</code>: visibility (boolean) </td></tr>
+    <tr><td> <code>moveSprite(sprite_name, x, y, direction=90, scale=1, visible=True)</code>                    </td><td> Moves a sprite. </td><td> <code>sprite_name</code>: sprite name (string), <code>x</code>, <code>y</code>: position (float), <code>direction</code>: angle (float), <code>scale</code>: scale (float), <code>visible</code>: visibility (boolean)                                  </td></tr>
     </tbody>
 </table>
-<h2><a href="#notes" id="notes"></a>Notes</h2>
+<h2>Notes</h2>
 <ul>
     <li>Ensure that the Voxelamming app is running and connected to the same room name specified in your JavaScript script.</li>
 </ul>
 <p>This library is under active development. More features and improvements are planned for future releases.</p>
-<h2><a href="#license" id="license"></a>License</h2>
+<h2>License</h2>
 <p><a href="https://github.com/creativival/voxelamming/blob/master/LICENSE">MIT License</a></p>
-<h2><a href="#author" id="author"></a>Author</h2>
+<h2>Author</h2>
 <p>creativival</p>
 
 
