@@ -16,43 +16,39 @@ Voxelamming is an AR programming learning app. Even programming beginners can le
 ## Installation
 
 ```bash
-npm install voxelamming-node
+npm install voxelamming
 ```
 
 ## Usage
 
 ```javascript
-// const { BuildBox } = require('voxelamming-node');
+// main.mjs
+import { Voxelamming } from 'voxelamming';
 
-(async () => {
-  const roomName = '1000';
-  const buildBox = new BuildBox(roomName);
+const roomName = '1000';
+const vox = new Voxelamming(roomName);
 
-  buildBox.setBoxSize(0.5);
-  buildBox.setBuildInterval(0.01);
+vox.setBoxSize(0.5);
+vox.setBuildInterval(0.01);
 
-  for (let i = 0; i < 100; i++) {
-    buildBox.createBox(-1, i, 0, 0, 1, 1);
-    buildBox.createBox(0, i, 0, 1, 0, 0);
-    buildBox.createBox(1, i, 0, 1, 1, 0);
-    buildBox.createBox(2, i, 0, 0, 1, 1);
-  }
+for (let i = 0; i < 100; i++) {
+  vox.createBox(-1, i, 0, 0, 1, 1);
+  vox.createBox(0, i, 0, 1, 0, 0);
+  vox.createBox(1, i, 0, 1, 1, 0);
+  vox.createBox(2, i, 0, 0, 1, 1);
+}
 
-  for (let i = 0; i < 50; i++) {
-    buildBox.removeBox(0, i * 2, 0);
-    buildBox.removeBox(1, i * 2 + 1, 0);
-  }
+for (let i = 0; i < 50; i++) {
+  vox.removeBox(0, i * 2, 0);
+  vox.removeBox(1, i * 2 + 1, 0);
+}
 
-  await buildBox.sendData("main");
-  console.log('send data done')
-})().catch(error => {
-  console.error(error);
-});
-
+await vox.sendData("main");
+console.log('send data done')
 ```
 
 
-This code snippet demonstrates a simple example where a red voxel is created at a specific location. You can use various functions provided by the `BuildBox` class to build more complex models.
+This code snippet demonstrates a simple example where a red voxel is created at a specific location. You can use various functions provided by the `Voxelamming` class to build more complex models.
 
 #### Method description
 
@@ -81,6 +77,12 @@ This code snippet demonstrates a simple example where a red voxel is created at 
 | `frameOut()` | Ends recording a frame. | |
 | `setFrameFps(fps)` | Sets the frame rate (default: 2). | `fps`: Frame rate (int) |
 | `setFrameRepeats(repeats)` | Sets the number of frame repetitions (default: 10). | `repeats`: Number of repetitions (int) |
+| Game Method Name                                                                              | Description | Arguments                                                                                                                                                            |
+| `setGameScreen(width, height, angle=90, r=1, g=1, b=0, alpha=0.5)`                | Sets the game screen size. | `width`, `height`: screen size (float), `angle`: angle (float), `r`, `g`, `b`, `alpha`: color (float, 0-1)                                                            |
+| `setGameScore(score)`                                                                  | Sets the game score. | `score`: game score (int)                                                                                                                                            |
+| `sendGameOver()`                                                                       | Triggers game over. |                                                                                                                                                                     |
+| `createSprite(sprite_name, color_list, x, y, direction=90, scale=1, visible=True)`      | Creates a sprite. | `sprite_name`: sprite name (string), `color_list`: dot color data (string), `x`, `y`: position (float), `direction`: angle (float), `scale`: scale (float), `visible`: visibility (boolean) |
+| `moveSprite(sprite_name, x, y, direction=90, scale=1, visible=True)`                    | Moves a sprite. | `sprite_name`: sprite name (string), `x`, `y`: position (float), `direction`: angle (float), `scale`: scale (float), `visible`: visibility (boolean)                                  |
 
 
 ## Notes

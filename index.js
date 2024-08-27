@@ -1,4 +1,3 @@
-const WebSocket = require('ws');
 const fs = require('fs');
 const {
   getRotationMatrix,
@@ -6,24 +5,40 @@ const {
   transformPointByRotationMatrix,
   addVectors,
   transpose3x3
-} = require('./matrixUtil'); // .mjs を削除
+} = require('./matrixUtil.js');
 
-class BuildBox {
+let WebSocketClient;
+
+if (typeof window !== 'undefined' && typeof window.WebSocket !== 'undefined') {
+  WebSocketClient = window.WebSocket;
+} else {
+  WebSocketClient = require('ws');
+}
+
+class Voxelamming {
   constructor(roomName) {
     this.textureNames = ["grass", "stone", "dirt", "planks", "bricks"];
+    this.modelNames = ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Sun",
+      "Moon", "ToyBiplane", "ToyCar", "Drummer", "Robot", "ToyRocket", "RocketToy1", "RocketToy2", "Skull"];
     this.roomName = roomName;
     this.isAllowedMatrix = 0;
     this.savedMatrices = [];
-    this.translation = [0, 0, 0, 0, 0, 0];
-    this.matrixTranslation = [0, 0, 0, 0, 0, 0];
-    this.frameTranslations = [];
+    this.nodeTransform = [0, 0, 0, 0, 0, 0];
+    this.matrixTransform = [0, 0, 0, 0, 0, 0];
+    this.frameTransforms = [];
     this.globalAnimation = [0, 0, 0, 0, 0, 0, 1, 0]
     this.animation = [0, 0, 0, 0, 0, 0, 1, 0]
     this.boxes = [];
     this.frames = [];
-    this.sentence = []
+    this.sentences = []
     this.lights = [];
-    this.commands = []
+    this.commands = [];
+    this.models = [];
+    this.modelMoves = [];
+    this.sprites = [];
+    this.spriteMoves = [];
+    this.gameScore = -1;
+    this.gameScreen = [] // width, height, angle=90, red=1, green=1, blue=1, alpha=0.5
     this.size = 1.0;
     this.shape = 'box'
     this.isMetallic = 0
@@ -32,29 +47,47 @@ class BuildBox {
     this.buildInterval = 0.01;
     this.isFraming = false;
     this.frameId = 0;
+    this.rotationStyles = {}; // 回転の制御（送信しない）
+    this.socket = null;
+    this.inactivityTimeout = null; // 非アクティブタイマー
+    this.inactivityDelay = 2000; // 2秒後に接続を切断
   }
 
-  clearData() {
-    this.isAllowedMatrix = 0;
-    this.savedMatrices = [];
-    this.translation = [0, 0, 0, 0, 0, 0];
-    this.matrixTranslation = [0, 0, 0, 0, 0, 0];
-    this.frameTranslations = [];
-    this.globalAnimation = [0, 0, 0, 0, 0, 0, 1, 0]
-    this.animation = [0, 0, 0, 0, 0, 0, 1, 0]
-    this.boxes = [];
-    this.frames = [];
-    this.sentence = []
-    this.lights = [];
-    this.commands = []
-    this.size = 1.0;
-    this.shape = 'box'
-    this.isMetallic = 0
-    this.roughness = 0.5
-    this.isAllowedFloat = 0
-    this.buildInterval = 0.01;
-    this.isFraming = false;
-    this.frameId = 0;
+  async clearData() {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        this.isAllowedMatrix = 0;
+        this.savedMatrices = [];
+        this.nodeTransform = [0, 0, 0, 0, 0, 0];
+        this.matrixTransform = [0, 0, 0, 0, 0, 0];
+        this.frameTransforms = [];
+        this.globalAnimation = [0, 0, 0, 0, 0, 0, 1, 0];
+        this.animation = [0, 0, 0, 0, 0, 0, 1, 0];
+        this.boxes = [];
+        this.frames = [];
+        this.sentences = [];
+        this.lights = [];
+        this.commands = [];
+        this.models = [];
+        this.modelMoves = [];
+        this.sprites = [];
+        this.spriteMoves = [];
+        this.gameScore = -1;
+        this.gameScreen = [] // width, height, angle=90, red=1, green=1, blue=0, alpha=0.5
+        this.size = 1.0;
+        this.shape = 'box';
+        this.isMetallic = 0;
+        this.roughness = 0.5;
+        this.isAllowedFloat = 0;
+        this.buildInterval = 0.01;
+        this.isFraming = false;
+        this.frameId = 0;
+        this.rotationStyles = {}; // 回転の制御（送信しない）
+
+        // すべての初期化が完了したらresolveを呼び出す
+        resolve();
+      }, 0); // 遅延を0に設定
+    });
   }
 
   setFrameFPS(fps = 2) {
@@ -76,15 +109,15 @@ class BuildBox {
 
   pushMatrix() {
     this.isAllowedMatrix++;
-    this.savedMatrices.push(this.matrixTranslation);
+    this.savedMatrices.push(this.matrixTransform);
   }
 
   popMatrix() {
     this.isAllowedMatrix--;
-    this.matrixTranslation = this.savedMatrices.pop();
+    this.matrixTransform = this.savedMatrices.pop();
   }
 
-  translate(x, y, z, pitch = 0, yaw = 0, roll = 0) {
+  transform(x, y, z, pitch = 0, yaw = 0, roll = 0) {
     if (this.isAllowedMatrix) {
       // 移動用のマトリックスを計算する
       const matrix = this.savedMatrices[this.savedMatrices.length - 1];
@@ -106,17 +139,17 @@ class BuildBox {
       [x, y, z] = addVectors(basePosition, [addX, addY, addZ]);
       [x, y, z] = this.roundNumbers([x, y, z]);
 
-      const translateRotationMatrix = getRotationMatrix(-pitch, -yaw, -roll);
-      const rotateMatrix = matrixMultiply(translateRotationMatrix, baseRotationMatrix);
+      const transformRotationMatrix = getRotationMatrix(-pitch, -yaw, -roll);
+      const rotateMatrix = matrixMultiply(transformRotationMatrix, baseRotationMatrix);
 
-      this.matrixTranslation = [x, y, z, ...rotateMatrix[0], ...rotateMatrix[1], ...rotateMatrix[2]];
+      this.matrixTransform = [x, y, z, ...rotateMatrix[0], ...rotateMatrix[1], ...rotateMatrix[2]];
     } else {
       [x, y, z] = this.roundNumbers([x, y, z]);
 
       if (this.isFraming) {
-        this.frameTranslations.push([x, y, z, pitch, yaw, roll, this.frameId]);
+        this.frameTransforms.push([x, y, z, pitch, yaw, roll, this.frameId]);
       } else {
-        this.translation = [x, y, z, pitch, yaw, roll];
+        this.nodeTransform = [x, y, z, pitch, yaw, roll];
       }
     }
   }
@@ -124,7 +157,7 @@ class BuildBox {
   createBox(x, y, z, r=1, g=1, b=1, alpha=1, texture='') {
     if (this.isAllowedMatrix) {
       // 移動用のマトリックスにより位置を計算する
-      const matrix = this.matrixTranslation;
+      const matrix = this.matrixTransform;
       const basePosition = matrix.slice(0, 3);
 
       let baseRotationMatrix;
@@ -143,7 +176,7 @@ class BuildBox {
     }
 
     [x, y, z] = this.roundNumbers([x, y, z]);
-    [r, g, b, alpha] = this.roundColors([r, g, b, alpha]);
+    [r, g, b, alpha] = this.roundTwoDecimals([r, g, b, alpha]);
     // 重ねておくことを防止
     this.removeBox(x, y, z);
 
@@ -201,17 +234,17 @@ class BuildBox {
     this.buildInterval = interval;
   }
 
-  writeSentence(sentence, x, y, z, r=1, g=1, b=1, alpha=1) {
+  writeSentence(sentence, x, y, z, r=1, g=1, b=1, alpha=1, fontSize=16, isFixedFont=false) {
     [x, y, z] = this.roundNumbers([x, y, z]);
-    [r, g, b, alpha] = this.roundColors([r, g, b, alpha]);
+    [r, g, b, alpha] = this.roundTwoDecimals([r, g, b, alpha]);
     [x, y, z] = [x, y, z].map(val => String(val));
-    [r, g, b, alpha] = [r, g, b, alpha].map(val => String(val));
-    this.sentence = [sentence, x, y, z, r, g, b, alpha];
+    [r, g, b, alpha, fontSize] = [r, g, b, alpha, fontSize].map(val => String(val));
+    this.sentences.push([sentence, x, y, z, r, g, b, alpha, fontSize, isFixedFont ? "1" : "0"]);
   }
 
   setLight(x, y, z, r=1, g=1, b=1, alpha=1, intensity=1000, interval=1, lightType='point') {
     [x, y, z] = this.roundNumbers([x, y, z]);
-    [r, g, b, alpha] = this.roundColors([r, g, b, alpha]);
+    [r, g, b, alpha] = this.roundTwoDecimals([r, g, b, alpha]);
 
     if (lightType === 'point') {
       lightType = 1;
@@ -298,20 +331,104 @@ class BuildBox {
     this.roughness = roughness;
   }
 
-  async sendData(name= '') {
+  createModel(modelName, x = 0, y = 0, z = 0,
+              pitch = 0, yaw = 0, roll = 0, scale = 1, entityName = '') {
+    if (this.modelNames.includes(modelName)) {
+      [x, y, z, pitch, yaw, roll, scale] = this.roundTwoDecimals([x, y, z, pitch, yaw, roll, scale]);
+      [x, y, z, pitch, yaw, roll, scale] = [x, y, z, pitch, yaw, roll, scale].map(String);
+
+      this.models.push([modelName, x, y, z, pitch, yaw, roll, scale, entityName]);
+    } else {
+      console.log(`No model name: ${modelName}`);
+    }
+  }
+
+  moveModel(entityName, x = 0, y = 0, z = 0,
+            pitch = 0, yaw = 0, roll = 0, scale = 1) {
+    [x, y, z, pitch, yaw, roll, scale] = this.roundTwoDecimals([x, y, z, pitch, yaw, roll, scale]);
+    [x, y, z, pitch, yaw, roll, scale] = [x, y, z, pitch, yaw, roll, scale].map(String);
+
+    this.modelMoves.push([entityName, x, y, z, pitch, yaw, roll, scale]);
+  }
+
+  // Game API
+
+  setGameScreen(width, height, angle = 90, r = 1, g = 1, b = 0, alpha = 0.5) {
+    this.gameScreen = [width, height, angle, r, g, b, alpha];
+  }
+
+  setGameScore(score) {
+    this.gameScore = Number(score);
+  }
+
+  sendGameOver() {
+    this.commands.push('gameOver');
+  }
+
+  setRotationStyle(spriteName, rotation_style = 'all around') {
+    this.rotationStyles[spriteName] = rotation_style;
+  }
+
+  createSprite(spriteName, colorList, x, y, direction = 90, scale = 1, visible = true) {
+    // 新しいスプライトデータを配列に追加
+    [x, y, direction] = this.roundNumbers([x, y, direction]);
+    [x, y, direction, scale] = [x, y, direction, scale].map(val => String(val))
+    this.sprites.push([spriteName, colorList, x, y, direction, scale, visible ? '1' : '0']);
+  }
+
+  moveSprite(spriteName, x, y, direction = 0, scale = 1, visible = true) {
+    // const sprite = this.runtime.getSpriteTargetByName(spriteName);
+    [x, y, direction] = this.roundNumbers([x, y, direction]);
+    [x, y, direction, scale] = [x, y, direction, scale].map(val => String(val))
+
+    // rotationStyleを取得
+    if (spriteName in this.rotationStyles) {
+      const rotationStyle = this.rotationStyles[spriteName];
+
+      // rotationStyleが変更された場合、新しいスプライトデータを配列に追加
+      if (rotationStyle === 'left-right') {
+        const direction_mod = Math.abs(direction) % 360;
+        if (direction_mod < 270 && direction_mod > 90) {
+          direction = "-180"; // -180は左右反転するようにボクセラミング側で実装されている
+        } else {
+          direction = "0";
+        }
+      } else if (rotationStyle === "don't rotate") {
+        direction = "0"
+      } else {
+        direction = String(direction)
+      }
+    } else {
+      // rotationStyleが設定されていない場合、そのままの値を使う
+      direction = String(direction)
+    }
+
+    // sprites配列から同じスプライト名の要素を削除
+    this.spriteMoves = this.spriteMoves.filter(spriteInfo => spriteInfo[0] !== spriteName);
+
+    // 新しいスプライトデータを配列に追加
+    this.spriteMoves.push([spriteName, x, y, direction, scale, visible ? '1' : '0']);
+  }
+
+  async sendData(name = '') {
     console.log('Sending data...');
-    const ws = new WebSocket('wss://websocket.voxelamming.com');
     const date = new Date();
     const dataToSend = {
-      translation: this.translation,
-      frameTranslations: this.frameTranslations,
+      nodeTransform: this.nodeTransform,
+      frameTransforms: this.frameTransforms,
       globalAnimation: this.globalAnimation,
       animation: this.animation,
       boxes: this.boxes,
       frames: this.frames,
-      sentence: this.sentence,
+      sentences: this.sentences,
       lights: this.lights,
       commands: this.commands,
+      models: this.models,
+      modelMoves: this.modelMoves,
+      sprites: this.sprites,
+      spriteMoves: this.spriteMoves,
+      gameScore: this.gameScore,
+      gameScreen: this.gameScreen,
       size: this.size,
       shape: this.shape,
       interval: this.buildInterval,
@@ -322,26 +439,64 @@ class BuildBox {
       date: date.toISOString()
     };
 
-    try {
-      await new Promise((resolve, reject) => {  ws.onopen = () => {
-        ws.send(this.roomName);
-        console.log(`Joined room: ${this.roomName}`);
-        ws.send(JSON.stringify(dataToSend));
-        console.log(dataToSend)
-        console.log('Sent data to server');
-        setTimeout(() => {
-          ws.close();
+    return new Promise((resolve, reject) => {
+      try {
+        if (this.socket && this.socket.readyState === WebSocketClient.OPEN) {
+          this.socket.send(JSON.stringify(dataToSend));
+          console.log('Sent data to server (existing connection):', dataToSend);
+          this.startInactivityTimer(); // タイマーを開始
           resolve();
-        }, 1000); // 適切な時間を指定して自動的に接続を閉じる
-      };
+        } else if (this.socket && this.socket.readyState === WebSocketClient.CONNECTING) {
+          this.socket.onopen = () => {
+            this.socket.send(this.roomName);
+            console.log(`Joined room: ${this.roomName}`);
+            this.socket.send(JSON.stringify(dataToSend));
+            console.log('Sent data to server (connected):', dataToSend);
+            this.startInactivityTimer(); // タイマーを開始
+            resolve();
+          };
+        } else {
+          this.socket = new WebSocketClient('wss://websocket.voxelamming.com');
 
-        ws.onerror = error => {
-          console.error(`WebSocket error: ${error}`);
-          reject(error);
-        };
-      });
-    } catch (error) {
-      console.error(`WebSocket connection failed: ${error}`);
+          this.socket.onopen = () => {
+            this.socket.send(this.roomName);
+            console.log(`Joined room: ${this.roomName}`);
+            this.socket.send(JSON.stringify(dataToSend));
+            console.log('Sent data to server (new connection):', dataToSend);
+            this.startInactivityTimer(); // タイマーを開始
+            resolve();
+          };
+
+          this.socket.onerror = error => {
+            console.error(`WebSocket error: ${error}`);
+            reject(error);
+          };
+
+          this.socket.onclose = () => {
+            console.log('WebSocket connection closed.');
+          };
+        }
+      } catch (error) {
+        console.error(`WebSocket connection failed: ${error}`);
+        reject(error);
+      }
+    });
+  }
+
+  startInactivityTimer() {
+    this.clearInactivityTimer(); // 既存のタイマーをクリア
+    this.inactivityTimeout = setTimeout(() => {
+      if (this.socket && this.socket.readyState === WebSocketClient.OPEN) {
+        console.log('No data sent for 2 seconds. Closing WebSocket connection.');
+        this.socket.close();
+      }
+    }, this.inactivityDelay);
+  }
+
+  clearInactivityTimer() {
+    if (this.inactivityTimeout) {
+      clearTimeout(this.inactivityTimeout);
+      this.inactivityTimeout = null;
     }
   }
 
@@ -351,20 +506,20 @@ class BuildBox {
 
   roundNumbers(num_list) {
     if (this.isAllowedFloat) {
-      return num_list.map(val => parseFloat(val.toFixed(2)));
+      return this.roundTwoDecimals(num_list);
     } else {
       return num_list.map(val => Math.floor(parseFloat(val.toFixed(1))));
     }
   }
 
-  roundColors(num_list) {
+  roundTwoDecimals(num_list) {
     return num_list.map(val => parseFloat(val.toFixed(2)));
   }
 }
 
 class Turtle {
-  constructor(buildBox) {
-    this.buildBox = buildBox;
+  constructor(voxelammingInstance) {
+    this.voxelammingInstance = voxelammingInstance;
     this.x = 0;
     this.y = 0;
     this.z = 0;
@@ -384,7 +539,7 @@ class Turtle {
     z = this.roundToThreeDecimalPlaces(z);
 
     if (this.drawable) {
-      this.buildBox.drawLine(this.x, this.y, this.z, x, y, z, ...this.color);
+      this.voxelammingInstance.drawLine(this.x, this.y, this.z, x, y, z, ...this.color);
     }
 
     this.x = x;
