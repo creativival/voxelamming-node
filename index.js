@@ -37,7 +37,7 @@ class Voxelamming {
     this.modelMoves = [];
     this.sprites = [];
     this.spriteMoves = [];
-    this.gameScore = -1;
+    this.gameScore = [];
     this.gameScreen = [] // width, height, angle=90, red=1, green=1, blue=1, alpha=0.5
     this.size = 1.0;
     this.shape = 'box'
@@ -72,8 +72,8 @@ class Voxelamming {
         this.modelMoves = [];
         this.sprites = [];
         this.spriteMoves = [];
-        this.gameScore = -1;
-        this.gameScreen = [] // width, height, angle=90, red=1, green=1, blue=0, alpha=0.5
+        this.gameScore = [];
+        this.gameScreen = [] // width, height, angle=90, red=1, green=0, blue=1, alpha=0.3
         this.size = 1.0;
         this.shape = 'box';
         this.isMetallic = 0;
@@ -154,7 +154,7 @@ class Voxelamming {
     }
   }
 
-  createBox(x, y, z, r=1, g=1, b=1, alpha=1, texture='') {
+  createBox(x, y, z, r = 1, g = 1, b = 1, alpha = 1, texture = '') {
     if (this.isAllowedMatrix) {
       // 移動用のマトリックスにより位置を計算する
       const matrix = this.matrixTransform;
@@ -221,7 +221,7 @@ class Voxelamming {
     this.globalAnimation = [x, y, z, pitch, yaw, roll, scale, interval];
   }
 
-  animate(x, y, z, pitch=0, yaw=0, roll=0, scale=1, interval=10) {
+  animate(x, y, z, pitch = 0, yaw = 0, roll = 0, scale = 1, interval = 10) {
     [x, y, z] = this.roundNumbers([x, y, z]);
     this.animation = [x, y, z, pitch, yaw, roll, scale, interval]
   }
@@ -234,7 +234,7 @@ class Voxelamming {
     this.buildInterval = interval;
   }
 
-  writeSentence(sentence, x, y, z, r=1, g=1, b=1, alpha=1, fontSize=16, isFixedFont=false) {
+  writeSentence(sentence, x, y, z, r = 1, g = 1, b = 1, alpha = 1, fontSize = 16, isFixedFont = false) {
     [x, y, z] = this.roundNumbers([x, y, z]);
     [r, g, b, alpha] = this.roundTwoDecimals([r, g, b, alpha]);
     [x, y, z] = [x, y, z].map(val => String(val));
@@ -242,7 +242,7 @@ class Voxelamming {
     this.sentences.push([sentence, x, y, z, r, g, b, alpha, fontSize, isFixedFont ? "1" : "0"]);
   }
 
-  setLight(x, y, z, r=1, g=1, b=1, alpha=1, intensity=1000, interval=1, lightType='point') {
+  setLight(x, y, z, r = 1, g = 1, b = 1, alpha = 1, intensity = 1000, interval = 1, lightType = 'point') {
     [x, y, z] = this.roundNumbers([x, y, z]);
     [r, g, b, alpha] = this.roundTwoDecimals([r, g, b, alpha]);
 
@@ -284,7 +284,7 @@ class Voxelamming {
           const z = z1 + (x - x1) * diff_z / diff_x;
           this.createBox(x, y, z, r, g, b, alpha);
         }
-      } else{
+      } else {
         for (let x = x1; x >= x2; x--) {
           const y = y1 + (x - x1) * diff_y / diff_x;
           const z = z1 + (x - x1) * diff_z / diff_x;
@@ -353,61 +353,156 @@ class Voxelamming {
 
   // Game API
 
-  setGameScreen(width, height, angle = 90, r = 1, g = 1, b = 0, alpha = 0.5) {
-    this.gameScreen = [width, height, angle, r, g, b, alpha];
+  setGameScreen(width, height, angle = 90, red = 1, green = 1, blue = 0, alpha = 0.5) {
+    this.gameScreen = [width, height, angle, red, green, blue, alpha];
   }
 
-  setGameScore(score) {
-    this.gameScore = Number(score);
+  setGameScore(score, x = 0, y = 0) {
+    score = parseFloat(score);
+    x = parseFloat(x);
+    y = parseFloat(y);
+    this.gameScore = [score, x, y];
   }
 
   sendGameOver() {
     this.commands.push('gameOver');
   }
 
-  setRotationStyle(spriteName, rotation_style = 'all around') {
-    this.rotationStyles[spriteName] = rotation_style;
+  sendGameClear() {
+    this.commands.push('gameClear');
   }
 
-  createSprite(spriteName, colorList, x, y, direction = 90, scale = 1, visible = true) {
-    // 新しいスプライトデータを配列に追加
-    [x, y, direction] = this.roundNumbers([x, y, direction]);
-    [x, y, direction, scale] = [x, y, direction, scale].map(val => String(val))
-    this.sprites.push([spriteName, colorList, x, y, direction, scale, visible ? '1' : '0']);
+  setRotationStyle(spriteName, rotationStyle = 'all around') {
+    this.rotationStyles[spriteName] = rotationStyle;
   }
 
-  moveSprite(spriteName, x, y, direction = 0, scale = 1, visible = true) {
-    // const sprite = this.runtime.getSpriteTargetByName(spriteName);
-    [x, y, direction] = this.roundNumbers([x, y, direction]);
-    [x, y, direction, scale] = [x, y, direction, scale].map(val => String(val))
+  // Introduce the concept of template and clone for sprite creation and display.
+  // A template is a collection of voxels with a standard size of 8x8.
+  // This concept allows for creating multiple sprites (e.g., enemies, bullets).
+  // Sprites are created as templates in the Voxelamming app (not displayed with isEnable = false).
+  // Sprites are displayed as clones of the template on the screen.
+  // All clones are deleted on each transmission, and new clones are created.
+  // This allows multiple sprites to be created from the template.
 
-    // rotationStyleを取得
+  // Create a sprite template (sprite is not placed)
+  createSpriteTemplate(spriteName, colorList) {
+    this.sprites.push([spriteName, colorList]);
+  }
+
+  // Use the sprite template to display multiple sprites
+  displaySpriteTemplate(spriteName, x, y, direction = 0, scale = 1) {
+    // Round x, y, and direction
+    [x, y, direction] = this.roundNumbers([x, y, direction]);
+    x = String(x);
+    y = String(y);
+    direction = String(direction);
+    scale = String(scale);
+
+    // Get the rotation style
     if (spriteName in this.rotationStyles) {
-      const rotationStyle = this.rotationStyles[spriteName];
+      let rotationStyle = this.rotationStyles[spriteName];
 
-      // rotationStyleが変更された場合、新しいスプライトデータを配列に追加
+      // If the rotation style has changed, add new sprite data to the array
       if (rotationStyle === 'left-right') {
-        const direction_mod = Math.abs(direction) % 360;
-        if (direction_mod < 270 && direction_mod > 90) {
-          direction = "-180"; // -180は左右反転するようにボクセラミング側で実装されている
+        let directionMod = direction % 360; // Always process within the range of 0 to 359 (always positive)
+        if (directionMod > 90 && directionMod < 270) {
+          direction = "-180"; // -180 is implemented on the Voxelamming side to flip left and right
         } else {
           direction = "0";
         }
       } else if (rotationStyle === "don't rotate") {
-        direction = "0"
+        direction = "0";
       } else {
-        direction = String(direction)
+        direction = String(direction);
       }
     } else {
-      // rotationStyleが設定されていない場合、そのままの値を使う
-      direction = String(direction)
+      // If the rotation style is not set, use the original value
+      direction = String(direction);
     }
 
-    // sprites配列から同じスプライト名の要素を削除
-    this.spriteMoves = this.spriteMoves.filter(spriteInfo => spriteInfo[0] !== spriteName);
+    // Search the sprite_moves array for the specified sprite name
+    let matchingSprites = this.spriteMoves.filter((info) => info[0] === spriteName);
 
-    // 新しいスプライトデータを配列に追加
-    this.spriteMoves.push([spriteName, x, y, direction, scale, visible ? '1' : '0']);
+    // Save or update sprite move data
+    if (matchingSprites.length === 0) {
+      // Add new sprite data to the list
+      this.spriteMoves.push([spriteName, x, y, direction, scale]);
+    } else {
+      // Update existing sprite data (second or later sprite data)
+      let [index, spriteData] = matchingSprites[0];
+      this.spriteMoves[index] += [x, y, direction, scale];
+    }
+  }
+
+  // Normal sprite creation
+  createSprite(spriteName, colorList, x = 0, y = 0, direction = 0, scale = 1, visible = true) {
+    // (First step) Add sprite template data to the array (not displayed yet)
+    this.createSpriteTemplate(spriteName, colorList);
+
+    // (Second step) If the sprite is visible, add move data to the array (this will display the sprite)
+    // If visible is true, or if x, y, direction, or scale is not the default value
+    if (visible || !(x === 0 && y === 0 && direction === 0 && scale === 1)) {
+      [x, y, direction] = this.roundNumbers([x, y, direction]);
+      x = String(x);
+      y = String(y);
+      direction = String(direction);
+      scale = String(scale);
+      this.spriteMoves.push([spriteName, x, y, direction, scale]);
+    }
+  }
+
+  // Move a normal sprite
+  moveSprite(spriteName, x, y, direction = 0, scale = 1, visible = true) {
+    if (visible) {
+      // Same process as displaySpriteTemplate
+      this.displaySpriteTemplate(spriteName, x, y, direction, scale);
+    }
+  }
+
+  // Move a sprite clone
+  moveSpriteClone(spriteName, x, y, direction = 0, scale = 1) {
+    // Same process as displaySpriteTemplate
+    this.displaySpriteTemplate(spriteName, x, y, direction, scale);
+  }
+
+  // Display a dot (bullet)
+  // The dot is displayed as a special name (dot_color_width_height) template
+  displayDot(x, y, direction = 0, colorId = 10, width = 1, height = 1) {
+    let templateName = `dot_${colorId}_${width}_${height}`;
+    // Same process as displaySpriteTemplate
+    this.displaySpriteTemplate(templateName, x, y, direction, 1);
+  }
+
+  // Display text
+  // The text is displayed as a special name (template_color_width_height) template
+  // Once displayed, the template is automatically saved, allowing it to be displayed as a clone
+  displayText(text, x, y, direction = 0, scale = 1, colorId = 7, isVertical = false, align = '') {
+    // テキストの右寄せなどの情報を取得
+    let textFormat = '';
+    align = align.toLowerCase();
+
+    if (align.includes('top')) {
+      textFormat += 't';
+    } else if (align.includes('bottom')) {
+      textFormat += 'b';
+    }
+
+    if (align.includes('left')) {
+      textFormat += 'l';
+    } else if (align.includes('right')) {
+      textFormat += 'r';
+    }
+
+    if (isVertical) {
+      textFormat += 'v';
+    } else {
+      textFormat += 'h';
+    }
+
+    const templateName = `text_${text}_${colorId}_${textFormat}`;
+
+    // display_sprite_templateと同じ処理
+    this.displaySpriteTemplate(templateName, x, y, direction, scale);
   }
 
   async sendData(name = '') {
@@ -712,7 +807,7 @@ function isIncludedSixNumbers(line) {
 
 // 関数をエクスポート
 module.exports = {
-  BuildBox,
+  Voxelamming,
   Turtle,
   getMapDataFromCSV,
   getBoxColor,

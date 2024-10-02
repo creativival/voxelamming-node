@@ -1,6 +1,6 @@
 {
   "name": "voxelamming",
-  "version": "0.3.2",
+  "version": "0.3.7",
   "description": "This JavaScript package converts JavaScript code into JSON format and sends it to the Voxelamming app using WebSockets, allowing users to create 3D voxel models by writing JavaScript scripts.",
   "main": "index.js",
   "scripts": {

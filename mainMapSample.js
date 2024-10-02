@@ -1,13 +1,13 @@
-const { BuildBox, getMapDataFromCSV, getBoxColor } = require('./index.js'); // test
-// const { BuildBox, getMapDataFromCSV, getBoxColor } = require('voxelamming-node');
+const { Voxelamming, getMapDataFromCSV, getBoxColor } = require('./index.js'); // test
+// const { Voxelamming, getMapDataFromCSV, getBoxColor } = require('voxelamming-node');
 
 (async () => {
   const roomName = "1000";
-  const buildBox = new BuildBox(roomName);
+  const vox = new Voxelamming(roomName);
 
-  buildBox.setBoxSize(0.5);
-  buildBox.setBuildInterval(0.001);
-  buildBox.setCommand('liteRender');
+  vox.setBoxSize(0.5);
+  vox.setBuildInterval(0.001);
+  vox.setCommand('liteRender');
 
   const columnNum = 257;
   const rowNum = 257;
@@ -30,12 +30,12 @@ const { BuildBox, getMapDataFromCSV, getBoxColor } = require('./index.js'); // t
       const [r, g, b] = getBoxColor(y, maxHeight, highColor, lowColor);
 
       if (y >= 0) {
-        buildBox.createBox(x, y, z, r, g, b, 1);
+        vox.createBox(x, y, z, r, g, b, 1);
       }
     }
   }
 
-  await buildBox.sendData("mainMapSample");
+  await vox.sendData("mainMapSample");
 })().catch(error => {
   console.error(error);
 });
